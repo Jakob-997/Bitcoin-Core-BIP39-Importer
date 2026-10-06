@@ -2,7 +2,7 @@
 set -eu
 
 here=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
-archive="$here/bitcoin-32.0rc2-x86_64-linux-gnu.tar.gz"
+archive="$here/../bitcoin-32.0rc2-x86_64-linux-gnu.tar.gz"
 hash="0255103718033e6aee15fa944717fc277e047b845bff1e7408af0ea732d8d0c1"
 walletdir="$here/wallet"
 
