@@ -3,10 +3,10 @@ import getpass
 import hashlib
 import hmac
 import json
-from pathlib import Path
 import subprocess
 import sys
-import unicodedata
+
+from mnemonic import Mnemonic
 
 BASE58 = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 ORDER = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
@@ -39,26 +39,6 @@ def rpc(cli, args, wallet=None, secret=None):
         return p.stdout.strip()
 
 
-def mnemonic(raw):
-    words = unicodedata.normalize("NFKD", raw.strip()).split()
-    if len(words) not in (12, 15, 18, 21, 24):
-        fail("BIP39 mnemonic must contain 12, 15, 18, 21, or 24 words.")
-
-    wordlist = Path(__file__).with_name("bip39_english.txt").read_text().splitlines()
-    positions = {word: i for i, word in enumerate(wordlist)}
-    try:
-        bits = "".join(f"{positions[word]:011b}" for word in words)
-    except KeyError as e:
-        fail(f"Not a BIP39 English word: {e.args[0]}")
-
-    ent = len(bits) * 32 // 33
-    entropy = int(bits[:ent], 2).to_bytes(ent // 8, "big")
-    checksum = f"{int.from_bytes(hashlib.sha256(entropy).digest(), 'big'):0256b}"
-    if bits[ent:] != checksum[: len(bits) - ent]:
-        fail("Invalid BIP39 checksum.")
-    return " ".join(words)
-
-
 def base58check(payload):
     data = payload + hashlib.sha256(hashlib.sha256(payload).digest()).digest()[:4]
     zeros = len(data) - len(data.lstrip(b"\0"))
@@ -80,49 +60,38 @@ def master_xprv(seed, testnet=False):
 
 
 def main():
-    if len(sys.argv) != 2:
-        fail("Run through tails.sh.")
+    if len(sys.argv) not in (2, 3):
+        fail("Usage: tails.sh [--bip39-passphrase]")
+    if len(sys.argv) == 3 and sys.argv[2] != "--bip39-passphrase":
+        fail("Only supported option: --bip39-passphrase")
 
     cli = sys.argv[1]
-    phrase = mnemonic(input("BIP39 mnemonic: "))
-    bip39_pass = getpass.getpass("BIP39 passphrase (blank if none): ")
-    wallet_pass = getpass.getpass("Core wallet passphrase (blank = unencrypted): ")
+    bip39 = Mnemonic("english")
 
-    seed = hashlib.pbkdf2_hmac(
-        "sha512",
-        unicodedata.normalize("NFKD", phrase).encode(),
-        ("mnemonic" + unicodedata.normalize("NFKD", bip39_pass)).encode(),
-        2048,
-        64,
+    words = input("BIP39 mnemonic: ").strip()
+    if not bip39.check(words):
+        fail("Invalid BIP39 mnemonic.")
+
+    passphrase = (
+        getpass.getpass("BIP39 passphrase: ")
+        if len(sys.argv) == 3
+        else ""
     )
+    seed = bip39.to_seed(words, passphrase)
 
     chain = rpc(cli, ["getblockchaininfo"])["chain"]
     xprv = master_xprv(seed, chain != "main")
 
-    rpc(
-        cli,
-        ["createwallet", WALLET, "false", "true"],
-        secret=wallet_pass if wallet_pass else None,
-    )
+    rpc(cli, ["createwallet", WALLET, "false", "true"])
+    added = rpc(cli, ["addhdkey"], wallet=WALLET, secret=xprv)
+    xpub = added["xpub"]
 
-    if wallet_pass:
-        cmd = [cli, f"-rpcwallet={WALLET}", "-stdinwalletpassphrase", "walletpassphrase", "60"]
-        p = subprocess.run(cmd, input=wallet_pass + "\n", text=True, capture_output=True)
-        if p.returncode:
-            fail(p.stderr.strip() or p.stdout.strip())
-
-    try:
-        added = rpc(cli, ["addhdkey"], wallet=WALLET, secret=xprv)
-        xpub = added["xpub"]
-        for address_type in TYPES:
-            rpc(
-                cli,
-                ["createwalletdescriptor", address_type, json.dumps({"hdkey": xpub})],
-                wallet=WALLET,
-            )
-    finally:
-        if wallet_pass:
-            rpc(cli, ["walletlock"], wallet=WALLET)
+    for address_type in TYPES:
+        rpc(
+            cli,
+            ["createwalletdescriptor", address_type, json.dumps({"hdkey": xpub})],
+            wallet=WALLET,
+        )
 
     print(f"Imported BIP39 wallet into Bitcoin Core wallet: {WALLET}")
 
