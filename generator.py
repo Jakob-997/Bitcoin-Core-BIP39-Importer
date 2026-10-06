@@ -7,7 +7,7 @@ import sys
 from electrum.bip32 import BIP32Node
 from mnemonic import Mnemonic
 
-WALLET = "bip39-import"
+DEFAULT_WALLET = "bip39-import"
 TYPES = ("legacy", "p2sh-segwit", "bech32", "bech32m")
 
 
@@ -34,21 +34,22 @@ if not bip39.check(words):
     raise SystemExit("Invalid BIP39 mnemonic.")
 
 passphrase = getpass.getpass("BIP39 passphrase: ") if len(sys.argv) == 3 else ""
+wallet = input(f"Wallet name [{DEFAULT_WALLET}]: ").strip() or DEFAULT_WALLET
 seed = bip39.to_seed(words, passphrase)
 xprv = BIP32Node.from_rootseed(seed, xtype="standard").to_xprv()
 
-cli("createwallet", WALLET, "false", "true")
+cli("createwallet", wallet, "false", "true")
 added = json.loads(
-    cli(f"-rpcwallet={WALLET}", "-stdin", "addhdkey", stdin=xprv + "\n")
+    cli(f"-rpcwallet={wallet}", "-stdin", "addhdkey", stdin=xprv + "\n")
 )
 xpub = added["xpub"]
 
 for address_type in TYPES:
     cli(
-        f"-rpcwallet={WALLET}",
+        f"-rpcwallet={wallet}",
         "createwalletdescriptor",
         address_type,
         json.dumps({"hdkey": xpub}),
     )
 
-print(f"Imported BIP39 wallet into Bitcoin Core wallet: {WALLET}")
+print(f"Imported BIP39 wallet into Bitcoin Core wallet: {wallet}")
