@@ -16,8 +16,8 @@ esac
 umask 077
 [ ! -e "$walletdir" ] || { echo "wallet/ already exists"; exit 1; }
 
-python3 -c 'from mnemonic import Mnemonic' ||
-    { echo "Python mnemonic module not found"; exit 1; }
+python3 -c 'from mnemonic import Mnemonic; from electrum.bip32 import BIP32Node' ||
+    { echo "Required Tails Python modules not found"; exit 1; }
 
 nmcli networking off
 [ "$(LC_ALL=C nmcli networking)" = "disabled" ] ||
