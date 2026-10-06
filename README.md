@@ -48,6 +48,12 @@ Put the archive **next to the project folder**, not inside it:
 
 Then enter the project folder and run `./tails.sh`.
 
-The script creates `wallet/bip39-import`.
+The importer prompts for a wallet name:
+
+```text
+Wallet name [bip39-import]:
+```
+
+Press Enter to use `bip39-import`, or type another Bitcoin Core wallet name.
 
 For meaningful funds, use a physically air-gapped machine. The launcher disables networking as defense in depth; software network controls are not a substitute for a physical air gap.
