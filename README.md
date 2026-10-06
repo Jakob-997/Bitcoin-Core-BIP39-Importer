@@ -2,9 +2,13 @@
 
 Minimal BIP39 import overlay for Bitcoin Core.
 
-`BIP39 mnemonic -> BIP32 master key -> Bitcoin Core -> standard Core descriptors`
+`BIP39 mnemonic -> BIP32 master xprv -> Bitcoin Core -> standard Core descriptors`
 
-BIP39 validation and seed derivation use Trezor's `python-mnemonic`, the reference implementation linked by BIP39. The helper only implements the small BIP32 master-key serialization step needed before handing the key to Bitcoin Core.
+The importer does not implement BIP39 or BIP32 itself:
+
+- BIP39 validation and seed derivation use Trezor's `python-mnemonic`.
+- BIP32 master-key conversion uses Electrum's `BIP32Node`, already shipped with Tails.
+- Bitcoin Core receives the master xprv with `addhdkey` and creates the standard descriptor families with `createwalletdescriptor`.
 
 Built with the [Bitcoin Core Feature Overlay](https://github.com/Jakob-997/Bitcoin-Core-Feature-Overlay) pattern.
 
