@@ -25,21 +25,29 @@ nmcli networking off
 printf '%s  %s\n' "$hash" "$archive" | sha256sum --check
 
 state=$(mktemp -d /dev/shm/core-bip39.XXXXXX)
+core_pid=""
+
 cleanup() {
     [ -x "$state/core/bin/bitcoin-cli" ] &&
         "$state/core/bin/bitcoin-cli" stop >/dev/null 2>&1 || true
+    if [ -n "$core_pid" ]; then
+        while kill -0 "$core_pid" >/dev/null 2>&1; do
+            sleep 1
+        done
+    fi
     rm -rf "$state"
 }
-trap cleanup EXIT HUP INT TERM
+trap cleanup EXIT
+trap 'exit 1' HUP INT TERM
 
 mkdir "$state/core" "$walletdir"
 tar -xzf "$archive" -C "$state/core" --strip-components=1 --no-same-owner
 export HOME="$state"
 
-"$state/core/bin/bitcoind" -daemonwait -networkactive=0 -listen=0 -walletdir="$walletdir"
+"$state/core/bin/bitcoind" -daemonwait -pid="$state/bitcoind.pid" -networkactive=0 -listen=0 -walletdir="$walletdir"
+core_pid=$(cat "$state/bitcoind.pid")
 python3 "$here/generator.py" "$state/core/bin/bitcoin-cli" "$@"
-"$state/core/bin/bitcoin-cli" stop
 
+cleanup
 trap - EXIT HUP INT TERM
-rm -rf "$state"
 echo "Done."
