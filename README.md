@@ -38,7 +38,17 @@ bitcoin-32.0rc2-x86_64-linux-gnu.tar.gz
 SHA256 0255103718033e6aee15fa944717fc277e047b845bff1e7408af0ea732d8d0c1
 ```
 
-Put that archive beside `tails.sh` before going offline.
+Put the archive **next to the project folder**, not inside it:
+
+```text
+~/bitcoin-32.0rc2-x86_64-linux-gnu.tar.gz
+~/Bitcoin-Core-BIP39-Importer-main/
+    generator.py
+    README.md
+    tails.sh
+```
+
+Then enter the project folder and run `./tails.sh`.
 
 The script creates `wallet/bip39-import`.
 
