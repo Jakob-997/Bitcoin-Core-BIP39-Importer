@@ -14,7 +14,7 @@ Built with the [Bitcoin Core Feature Overlay](https://github.com/Jakob-997/Bitco
 
 ## Run
 
-Default: no BIP39 passphrase and no Core wallet encryption.
+Default: no BIP39 passphrase.
 
 ```bash
 chmod +x tails.sh
@@ -26,8 +26,6 @@ To use a BIP39 passphrase, opt in explicitly:
 ```bash
 ./tails.sh --bip39-passphrase
 ```
-
-There is intentionally no Core wallet-encryption option.
 
 ## Bitcoin Core
 
